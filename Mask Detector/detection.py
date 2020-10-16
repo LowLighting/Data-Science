@@ -41,6 +41,19 @@ def detect_and_predict_mask(frame, faceNet, maskNet):
 
     return (locs, preds)
 
+def mask_predict_image(image, faceNet, maskNet):
+    (locs, preds) = detect_and_predict_mask(image, faceNet, maskNet)
+    for (box, pred) in zip(locs, preds):
+        (startX, startY, endX, endY) = box
+        (mask, withoutMask) = pred
+        label = "Mask" if mask > withoutMask else "No Mask"
+        color = (0, 255*mask, 0) if label == "Mask" else (0, 0, 255*withoutMask)
+        label = "{}: {:.4f}%".format(label, max(mask, withoutMask) * 100)
+        cv2.putText(image, label, (startX, startY - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.45, color, 2)
+        cv2.rectangle(image, (startX, startY), (endX, endY), color, 2)
+    cv2.imshow("image", image) 
+
 
 prototxtPath = r"deploy.prototxt"
 weightsPath = r"res10_300x300_ssd_iter_140000.caffemodel"
@@ -54,17 +67,7 @@ vs = VideoStream(src=0).start()
 while True:
     frame = vs.read()
     frame = imutils.resize(frame, width=400)
-    (locs, preds) = detect_and_predict_mask(frame, faceNet, maskNet)
-    for (box, pred) in zip(locs, preds):
-        (startX, startY, endX, endY) = box
-        (mask, withoutMask) = pred
-        label = "Mask" if mask > withoutMask else "No Mask"
-        color = (0, 255*mask, 0) if label == "Mask" else (0, 0, 255*withoutMask)
-        label = "{}: {:.4f}%".format(label, max(mask, withoutMask) * 100)
-        cv2.putText(frame, label, (startX, startY - 10),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.45, color, 2)
-        cv2.rectangle(frame, (startX, startY), (endX, endY), color, 2)
-    cv2.imshow("Frame", frame)
+    mask_predict_image(frame, faceNet, maskNet)
     key = cv2.waitKey(1) & 0xFF
     if key == ord("3"):
         break
